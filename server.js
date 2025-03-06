@@ -1,10 +1,10 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-require("dotenc").config();
+require("dotenv").config();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 // In-memory database for demo purposes
 let transactions = [];
@@ -35,6 +35,10 @@ const exchangeRates = {
   Nigeria: { code: "NGN", rate: 900 },
   Kenya: { code: "KES", rate: 130 },
   "South Africa": { code: "ZAR", rate: 18 },
+  Uganda: { code: "UGX", rate: 3700 },
+  Tanzania: { code: "TZS", rate: 2500 },
+  Rwanda: { code: "RWF", rate: 1200 },
+  Ethiopia: { code: "ETB", rate: 57 }
 };
 
 // Middleware
@@ -51,14 +55,13 @@ app.get("/api/users", (req, res) => {
   res.json(users);
 });
 
-app.get("api/exchange-rates", (req, res) => {
+app.get("/api/exchange-rates", (req, res) => {
   res.json(exchangeRates);
 });
 
 // USSD endpoint
-
 app.post("/api/ussd", (req, res) => {
-  const { sessionId, serviceCode, phoenNumber, text } = req.body;
+  const { sessionId, serviceCode, phoneNumber, text } = req.body;
 
   let response = "";
 
@@ -70,17 +73,21 @@ app.post("/api/ussd", (req, res) => {
         4. Exchange Rates`;
   } else if (text === "1") {
     response = `CON Enter recipient phone number`;
-  } else if (text.startWith("1*") && !text.includes("*", 2)) {
+  } else if (text.startsWith("1*") && !text.includes("*", 2)) {
     response = `CON Select recipient's country:
         1. Ghana
         2. Nigeria
         3. Kenya
-        4. South Africa`;
-  } else if (text.startWith("1*") && text.split("*").length === 3) {
+        4. South Africa
+        5. Uganda
+        6. Tanzania
+        7. Rwanda
+        8. Ethiopia`;
+  } else if (text.startsWith("1*") && text.split("*").length === 3) {
     response = `CON Enter amount to send:`;
-  } else if (text.startWith("1*") && text.split("*").length === 4) {
+  } else if (text.startsWith("1*") && text.split("*").length === 4) {
     const segments = text.split("*");
-    const phoenNumber = segments[1];
+    const recipientPhone = segments[1];
     const countryCode = segments[2];
     const amount = segments[3];
 
@@ -98,12 +105,24 @@ app.post("/api/ussd", (req, res) => {
       case "4":
         country = "South Africa";
         break;
+      case "5":
+        country = "Uganda";
+        break;
+      case "6":
+        country = "Tanzania";
+        break;
+      case "7":
+        country = "Rwanda";
+        break;
+      case "8":
+        country = "Ethiopia";
+        break;
       default:
         break;
     }
     const localAmount = amount * exchangeRates[country].rate;
 
-    response = `CON Confirm sending $$(amount) to $(phoneNumber) in $(country):
+    response = `CON Confirm sending ${amount} USD to ${recipientPhone} in ${country}:
         1. Confirm
         2. Cancel`;
   } else if (
@@ -129,6 +148,18 @@ app.post("/api/ussd", (req, res) => {
         break;
       case "4":
         country = "South Africa";
+        break;
+      case "5":
+        country = "Uganda";
+        break;
+      case "6":
+        country = "Tanzania";
+        break;
+      case "7":
+        country = "Rwanda";
+        break;
+      case "8":
+        country = "Ethiopia";
         break;
     }
 
@@ -170,9 +201,13 @@ app.post("/api/ussd", (req, res) => {
     1 USD = ${exchangeRates['Ghana'].rate} GHS
     1 USD = ${exchangeRates['Nigeria'].rate} NGN
     1 USD = ${exchangeRates['Kenya'].rate} KES
-    1 USD = ${exchangeRates['South Africa'].rate} ZAR`;
+    1 USD = ${exchangeRates['South Africa'].rate} ZAR
+    1 USD = ${exchangeRates['Uganda'].rate} UGX
+    1 USD = ${exchangeRates['Tanzania'].rate} TZS
+    1 USD = ${exchangeRates['Rwanda'].rate} RWF
+    1 USD = ${exchangeRates['Ethiopia'].rate} ETB`;
   } else {
-    // Invalid option
+   
     response = `END Invalid option selected.`;
   }
   
@@ -181,8 +216,6 @@ app.post("/api/ussd", (req, res) => {
 });
 
 
-// Start the server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-
 });
